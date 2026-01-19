@@ -1,0 +1,73 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: schoolsharthi-db-prod
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-schoolsharthi_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-schoolsharthi}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-schoolsharthi_user}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - schoolsharthi-network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.prod
+    container_name: schoolsharthi-backend-prod
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-schoolsharthi_user}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-schoolsharthi}
+      SECRET_KEY: ${SECRET_KEY}
+      CORS_ORIGINS: ${CORS_ORIGINS}
+      ENVIRONMENT: production
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+      S3_BUCKET_NAME: ${S3_BUCKET_NAME:-}
+      AWS_REGION: ${AWS_REGION:-ap-south-1}
+      USE_LOCAL_STORAGE: ${USE_LOCAL_STORAGE:-false}
+      API_BASE_URL: ${API_BASE_URL:-http://localhost:8000}
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - schoolsharthi-network
+    volumes:
+      - ./backend/uploads:/app/uploads  # Only if using local storage
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.prod
+    container_name: schoolsharthi-frontend-prod
+    ports:
+      - "${FRONTEND_PORT:-3000}:3000"
+    environment:
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
+      NODE_ENV: production
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - schoolsharthi-network
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  schoolsharthi-network:
+    driver: bridge
