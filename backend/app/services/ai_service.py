@@ -1,6 +1,14 @@
 from app.config import settings
 from app.models import Subject, ClassLevel
 from typing import Optional
+import os
+
+# Disable proxy environment variables to prevent conflicts
+# These can cause issues with client initialization on Render
+os.environ.pop('HTTP_PROXY', None)
+os.environ.pop('HTTPS_PROXY', None)
+os.environ.pop('http_proxy', None)
+os.environ.pop('https_proxy', None)
 
 # Initialize AI client (Groq preferred, fallback to OpenAI)
 ai_client = None
@@ -18,8 +26,9 @@ def initialize_ai_client():
     # Try Groq first (free and fast)
     if settings.GROQ_API_KEY:
         try:
-            from groq import Groq
-            ai_client = Groq(api_key=settings.GROQ_API_KEY)
+            import groq
+            # Initialize Groq client without any proxy settings
+            ai_client = groq.Groq(api_key=settings.GROQ_API_KEY)
             ai_provider = "groq"
             print(f"✅ Groq AI client initialized successfully")
             return True
@@ -33,8 +42,10 @@ def initialize_ai_client():
     # Fallback to OpenAI if Groq not available
     if not ai_client and settings.OPENAI_API_KEY:
         try:
-            from openai import OpenAI
-            ai_client = OpenAI(api_key=settings.OPENAI_API_KEY)
+            import openai
+            # For openai 0.28.1, use the older API style
+            openai.api_key = settings.OPENAI_API_KEY
+            ai_client = openai
             ai_provider = "openai"
             print(f"✅ OpenAI client initialized successfully")
             return True
@@ -109,8 +120,9 @@ async def _call_ai(prompt: str, system_prompt: str = None) -> Optional[str]:
                 raise last_error
                 
         else:
-            # Use OpenAI API
-            response = ai_client.chat.completions.create(
+            # Use OpenAI API (version 0.28.1 style)
+            import openai
+            response = openai.ChatCompletion.create(
                 model="gpt-3.5-turbo",
                 messages=messages,
                 temperature=0.7,
