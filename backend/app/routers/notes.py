@@ -5,6 +5,7 @@ from app.database import get_db
 from app.models import Note, User, ClassLevel, Subject
 from app.schemas import NoteResponse
 from app.auth import get_current_active_user
+from app.utils.url_rewrite import rewrite_file_url
 
 router = APIRouter()
 
@@ -39,6 +40,14 @@ def get_notes(
         query = query.filter(Note.chapter.ilike(f"%{chapter}%"))
     
     notes = query.order_by(Note.created_at.desc()).offset(skip).limit(limit).all()
+    
+    # Rewrite localhost URLs to current BASE_URL
+    for note in notes:
+        if note.file_url:
+            note.file_url = rewrite_file_url(note.file_url)
+        if note.thumbnail_url:
+            note.thumbnail_url = rewrite_file_url(note.thumbnail_url)
+    
     return notes
 
 
@@ -52,6 +61,12 @@ def get_note(note_id: int, db: Session = Depends(get_db)):
     note.views_count += 1
     db.commit()
     db.refresh(note)
+    
+    # Rewrite localhost URLs to current BASE_URL
+    if note.file_url:
+        note.file_url = rewrite_file_url(note.file_url)
+    if note.thumbnail_url:
+        note.thumbnail_url = rewrite_file_url(note.thumbnail_url)
     
     return note
 
@@ -74,4 +89,7 @@ def download_note(note_id: int, db: Session = Depends(get_db)):
     note.download_count += 1
     db.commit()
     
-    return {"file_url": note.file_url}
+    # Rewrite localhost URL to current BASE_URL
+    file_url = rewrite_file_url(note.file_url) if note.file_url else None
+    
+    return {"file_url": file_url}

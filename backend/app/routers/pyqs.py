@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import PYQ, ExamType, ClassLevel, Subject
 from app.schemas import PYQResponse
+from app.utils.url_rewrite import rewrite_file_url
 
 router = APIRouter()
 
@@ -30,6 +31,16 @@ def get_pyqs(
         query = query.filter(PYQ.year == year)
     
     pyqs = query.order_by(PYQ.year.desc(), PYQ.created_at.desc()).offset(skip).limit(limit).all()
+    
+    # Rewrite localhost URLs to current BASE_URL
+    for pyq in pyqs:
+        if pyq.question_paper_url:
+            pyq.question_paper_url = rewrite_file_url(pyq.question_paper_url)
+        if pyq.answer_key_url:
+            pyq.answer_key_url = rewrite_file_url(pyq.answer_key_url)
+        if pyq.solution_url:
+            pyq.solution_url = rewrite_file_url(pyq.solution_url)
+    
     return pyqs
 
 
@@ -43,6 +54,14 @@ def get_pyq(pyq_id: int, db: Session = Depends(get_db)):
     pyq.views_count += 1
     db.commit()
     db.refresh(pyq)
+    
+    # Rewrite localhost URLs to current BASE_URL
+    if pyq.question_paper_url:
+        pyq.question_paper_url = rewrite_file_url(pyq.question_paper_url)
+    if pyq.answer_key_url:
+        pyq.answer_key_url = rewrite_file_url(pyq.answer_key_url)
+    if pyq.solution_url:
+        pyq.solution_url = rewrite_file_url(pyq.solution_url)
     
     return pyq
 
@@ -80,4 +99,12 @@ def download_pyq(pyq_id: int, db: Session = Depends(get_db)):
     pyq.download_count += 1
     db.commit()
     
-    return urls
+    # Rewrite localhost URLs to current BASE_URL
+    rewritten_urls = {}
+    for key, url in urls.items():
+        if url:
+            rewritten_urls[key] = rewrite_file_url(url)
+        else:
+            rewritten_urls[key] = url
+    
+    return rewritten_urls

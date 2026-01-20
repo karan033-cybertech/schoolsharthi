@@ -117,6 +117,8 @@ def search_notes(db: Session, query: str, keywords: List[str], limit: int) -> Li
     notes = notes_query.all()
     
     # Format results
+    from app.utils.url_rewrite import rewrite_file_url
+    
     return [{
         "id": note.id,
         "title": note.title,
@@ -124,7 +126,7 @@ def search_notes(db: Session, query: str, keywords: List[str], limit: int) -> Li
         "class_level": note.class_level.value if note.class_level else None,
         "chapter": note.chapter,
         "description": note.description,
-        "file_url": note.file_url,
+        "file_url": rewrite_file_url(note.file_url) if note.file_url else None,
         "views_count": note.views_count,
         "matched_keywords": [kw for kw in keywords if kw in (note.title + " " + note.chapter).lower()],
         "relevance_score": calculate_relevance(note.title + " " + note.chapter, query, keywords)
@@ -163,6 +165,8 @@ def search_pyqs(db: Session, query: str, keywords: List[str], limit: int) -> Lis
     
     pyqs = pyqs_query.all()
     
+    from app.utils.url_rewrite import rewrite_file_url
+    
     return [{
         "id": pyq.id,
         "title": pyq.title,
@@ -170,7 +174,7 @@ def search_pyqs(db: Session, query: str, keywords: List[str], limit: int) -> Lis
         "year": pyq.year,
         "subject": pyq.subject.value if pyq.subject else None,
         "class_level": pyq.class_level.value if pyq.class_level else None,
-        "question_paper_url": pyq.question_paper_url,
+        "question_paper_url": rewrite_file_url(pyq.question_paper_url) if pyq.question_paper_url else None,
         "views_count": pyq.views_count,
         "matched_keywords": [kw for kw in keywords if kw in pyq.title.lower()],
         "relevance_score": calculate_relevance(pyq.title, query, keywords)
