@@ -27,16 +27,33 @@ def initialize_ai_client():
     if settings.GROQ_API_KEY:
         try:
             import groq
-            # Initialize Groq client without any proxy settings
+            # Ensure no proxy environment variables are set before initialization
+            # This prevents httpx from trying to use proxies
+            proxy_vars = ['HTTP_PROXY', 'HTTPS_PROXY', 'http_proxy', 'https_proxy', 'ALL_PROXY', 'all_proxy']
+            saved_proxies = {}
+            for var in proxy_vars:
+                if var in os.environ:
+                    saved_proxies[var] = os.environ.pop(var)
+            
+            # Initialize Groq client - it will use httpx internally
+            # httpx 0.27.2 (pinned) supports proxies argument if needed, but we've removed env vars
             ai_client = groq.Groq(api_key=settings.GROQ_API_KEY)
             ai_provider = "groq"
             print(f"✅ Groq AI client initialized successfully")
+            
+            # Restore proxy vars if they were set (for other parts of the app)
+            for var, value in saved_proxies.items():
+                os.environ[var] = value
+                
             return True
         except ImportError:
             print("❌ Groq package not installed. Run: pip install groq")
             ai_client = None
         except Exception as e:
             print(f"❌ Failed to initialize Groq client: {e}")
+            print(f"   Error type: {type(e).__name__}")
+            import traceback
+            traceback.print_exc()
             ai_client = None
     
     # Fallback to OpenAI if Groq not available
