@@ -95,12 +95,47 @@ def health_check():
 
 @app.get("/api/files/{file_path:path}")
 def serve_file(file_path: str):
-    if ".." in file_path:
+    """
+    Serve files from local storage.
+    Security: Prevents directory traversal attacks.
+    """
+    # Security: Prevent directory traversal
+    if ".." in file_path or file_path.startswith("/"):
+        raise HTTPException(status_code=400, detail="Invalid path")
+    
+    # Normalize path separators
+    file_path = file_path.replace("\\", "/")
+    
+    # Construct full path
+    full_path = Path(settings.LOCAL_STORAGE_PATH) / file_path
+    
+    # Security: Ensure the resolved path is within the storage directory
+    try:
+        full_path = full_path.resolve()
+        storage_path = Path(settings.LOCAL_STORAGE_PATH).resolve()
+        if not str(full_path).startswith(str(storage_path)):
+            raise HTTPException(status_code=403, detail="Access denied")
+    except Exception:
         raise HTTPException(status_code=400, detail="Invalid path")
 
-    full_path = Path(settings.LOCAL_STORAGE_PATH) / file_path
-
-    if not full_path.exists():
+    if not full_path.exists() or not full_path.is_file():
         raise HTTPException(status_code=404, detail="File not found")
 
-    return FileResponse(full_path)
+    # Determine content type based on file extension
+    content_type = "application/octet-stream"
+    if file_path.endswith(".pdf"):
+        content_type = "application/pdf"
+    elif file_path.endswith((".jpg", ".jpeg")):
+        content_type = "image/jpeg"
+    elif file_path.endswith(".png"):
+        content_type = "image/png"
+    
+    return FileResponse(
+        full_path,
+        media_type=content_type,
+        filename=full_path.name,
+        headers={
+            "Content-Disposition": f'inline; filename="{full_path.name}"',
+            "Cache-Control": "public, max-age=3600"  # Cache for 1 hour
+        }
+    )

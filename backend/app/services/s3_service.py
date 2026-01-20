@@ -52,10 +52,13 @@ async def _upload_to_local_storage(file: UploadFile, folder_path: str) -> str:
     # Return URL that will be served by the file serving endpoint
     # Remove leading/trailing slashes and normalize path
     relative_path = f"{folder_path.strip('/')}/{unique_filename}".replace('\\', '/')
-    url = f"{settings.API_BASE_URL}/api/files/{relative_path}"
+    # Use the property to get the correct BASE_URL
+    base_url = settings.API_BASE_URL
+    url = f"{base_url}/api/files/{relative_path}"
     
     print(f"✅ File saved locally: {file_path}")
-    print(f"   URL: {url}")
+    print(f"   Generated URL: {url}")
+    print(f"   BASE_URL from config: {base_url}")
     
     return url
 
