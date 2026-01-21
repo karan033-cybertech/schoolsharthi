@@ -18,6 +18,7 @@ class Settings(BaseSettings):
     # Supabase Storage
     SUPABASE_URL: Optional[str] = None
     SUPABASE_KEY: Optional[str] = None  # Service role key for storage operations
+    SUPABASE_SERVICE_KEY: Optional[str] = None  # Alternative name for service key
     SUPABASE_BUCKET: str = "notes"  # Default bucket name
 
     # AWS S3 (deprecated - use Supabase Storage instead)
@@ -78,10 +79,12 @@ if settings.ENVIRONMENT == "production" and not settings.BASE_URL.startswith("ht
     print("⚠️  WARNING: BASE_URL should use HTTPS in production!")
 
 # Supabase Storage configuration check
-if not settings.SUPABASE_URL or not settings.SUPABASE_KEY:
+service_key = settings.SUPABASE_SERVICE_KEY or settings.SUPABASE_KEY
+if not settings.SUPABASE_URL or not service_key:
     print("⚠️  WARNING: Supabase Storage is not configured!")
-    print("   Please set SUPABASE_URL and SUPABASE_KEY environment variables.")
+    print("   Please set SUPABASE_URL and SUPABASE_KEY (or SUPABASE_SERVICE_KEY) environment variables.")
     print("   File uploads will fail without Supabase Storage configuration.")
 else:
     print(f"✅ Supabase Storage configured: {settings.SUPABASE_URL}")
     print(f"   Bucket: {settings.SUPABASE_BUCKET}")
+    print(f"   Service key: {'Set' if service_key else 'Not set'}")

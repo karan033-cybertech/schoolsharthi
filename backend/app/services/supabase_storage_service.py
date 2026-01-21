@@ -56,25 +56,39 @@ async def upload_file_to_supabase(file: UploadFile, folder_path: str) -> str:
         
         # Upload to Supabase Storage
         # The upload method accepts bytes directly
+        # Note: Supabase Storage uploads work with public buckets
+        # For private buckets, use create_signed_url() instead of get_public_url()
         response = supabase.storage.from_(bucket_name).upload(
             path=file_path,
             file=file_content,
             file_options={
                 "content-type": content_type,
-                "cache-control": "3600"  # Cache for 1 hour
+                "cache-control": "3600",  # Cache for 1 hour
+                "upsert": "false"  # Don't overwrite existing files
             }
         )
         
-        # Check for errors (upload returns the path on success, or raises an exception on error)
-        if response:
-            print(f"✅ File uploaded to Supabase Storage: {file_path}")
+        # Upload response may be None on success or raise an exception on error
+        # If we get here without exception, upload was successful
+        print(f"✅ File uploaded to Supabase Storage: {file_path}")
+        print(f"   File size: {len(file_content)} bytes")
+        print(f"   Content type: {content_type}")
         
         # Get public URL
         # Supabase get_public_url() returns a string URL directly for public buckets
+        # Format: https://{project_ref}.supabase.co/storage/v1/object/public/{bucket}/{path}
         public_url = supabase.storage.from_(bucket_name).get_public_url(file_path)
+        
+        # Handle response format variations
+        if isinstance(public_url, dict):
+            # Some versions return dict with 'publicUrl' key
+            public_url = public_url.get('publicUrl') or public_url.get('public_url')
         
         if not public_url:
             raise ValueError(f"Failed to get public URL for uploaded file: {file_path}")
+        
+        # Ensure URL is a string
+        public_url = str(public_url)
         
         print(f"   Public URL: {public_url}")
         
