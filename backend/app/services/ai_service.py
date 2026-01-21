@@ -36,7 +36,7 @@ def initialize_ai_client():
                     saved_proxies[var] = os.environ.pop(var)
             
             # Initialize Groq client - it will use httpx internally
-            # httpx 0.27.2 (pinned) supports proxies argument if needed, but we've removed env vars
+            # httpx >=0.24,<0.26 (compatible with supabase 2.3.4) supports proxies argument if needed, but we've removed env vars
             ai_client = groq.Groq(api_key=settings.GROQ_API_KEY)
             ai_provider = "groq"
             print(f"✅ Groq AI client initialized successfully")
