@@ -5,6 +5,16 @@ Production-safe: Handles proxy settings and ensures clean initialization.
 """
 from typing import Optional
 import os
+
+# CRITICAL: Remove proxy environment variables BEFORE importing Supabase
+# Render injects HTTP_PROXY and HTTPS_PROXY which Supabase Python SDK does not support
+# This must happen before "from supabase import" to prevent proxy conflicts
+proxy_vars = ['HTTP_PROXY', 'HTTPS_PROXY', 'http_proxy', 'https_proxy', 
+              'ALL_PROXY', 'all_proxy', 'NO_PROXY', 'no_proxy']
+for var in proxy_vars:
+    os.environ.pop(var, None)
+
+# Now safe to import Supabase
 from supabase import create_client, Client
 from app.config import settings
 
@@ -38,16 +48,14 @@ def get_supabase_client() -> Client:
     # Create client if it doesn't exist
     if _supabase_client is None:
         try:
-            # Ensure proxy vars are not set (they should be removed at startup)
-            # Double-check to prevent "unexpected keyword argument 'proxy'" errors on Render
-            proxy_vars = ['HTTP_PROXY', 'HTTPS_PROXY', 'http_proxy', 'https_proxy', 
-                         'ALL_PROXY', 'all_proxy', 'NO_PROXY', 'no_proxy']
+            # Final check: ensure proxy vars are not set before client creation
+            # This is a safety net (they should already be removed at module import time)
             for var in proxy_vars:
-                if var in os.environ:
-                    del os.environ[var]
+                os.environ.pop(var, None)
             
             # Initialize Supabase client with standard parameters only
             # Do NOT pass proxy or any custom httpx options to avoid conflicts
+            # Proxy vars are removed at module level before import to prevent conflicts
             _supabase_client = create_client(
                 settings.SUPABASE_URL,
                 service_key
@@ -57,9 +65,12 @@ def get_supabase_client() -> Client:
                     
         except TypeError as e:
             if "proxy" in str(e).lower():
+                # Check if proxy vars still exist
+                remaining_proxies = [var for var in proxy_vars if var in os.environ]
                 error_msg = (
                     f"Supabase client initialization failed due to proxy configuration: {e}. "
-                    "Proxy environment variables detected. They should be removed at startup. "
+                    f"Proxy environment variables still present: {remaining_proxies}. "
+                    "They should be removed before Supabase import. "
                     "Check that HTTP_PROXY and HTTPS_PROXY are not set."
                 )
             else:
