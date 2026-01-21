@@ -6,13 +6,19 @@ Production-safe: Handles proxy settings and ensures clean initialization.
 from typing import Optional
 import os
 
-# CRITICAL: Remove proxy environment variables BEFORE importing Supabase
+# CRITICAL: Remove proxy environment variables BEFORE importing ANYTHING that uses httpx
 # Render injects HTTP_PROXY and HTTPS_PROXY which Supabase Python SDK does not support
 # This must happen before "from supabase import" to prevent proxy conflicts
+# Also set NO_PROXY to ensure httpx doesn't try to use proxies
 proxy_vars = ['HTTP_PROXY', 'HTTPS_PROXY', 'http_proxy', 'https_proxy', 
               'ALL_PROXY', 'all_proxy', 'NO_PROXY', 'no_proxy']
 for var in proxy_vars:
     os.environ.pop(var, None)
+
+# Explicitly disable proxy detection by httpx
+# Set NO_PROXY to * to prevent any proxy usage
+os.environ['NO_PROXY'] = '*'
+os.environ['no_proxy'] = '*'
 
 # Now safe to import Supabase
 from supabase import create_client, Client
@@ -48,30 +54,47 @@ def get_supabase_client() -> Client:
     # Create client if it doesn't exist
     if _supabase_client is None:
         try:
-            # Final check: ensure proxy vars are not set before client creation
-            # This is a safety net (they should already be removed at module import time)
-            for var in proxy_vars:
+            # Final check: ensure proxy vars are explicitly disabled
+            # Remove any proxy settings
+            for var in ['HTTP_PROXY', 'HTTPS_PROXY', 'http_proxy', 'https_proxy', 'ALL_PROXY', 'all_proxy']:
                 os.environ.pop(var, None)
             
+            # Explicitly disable proxies with NO_PROXY
+            os.environ['NO_PROXY'] = '*'
+            os.environ['no_proxy'] = '*'
+            
             # Initialize Supabase client with standard parameters only
-            # Do NOT pass proxy or any custom httpx options to avoid conflicts
-            # Proxy vars are removed at module level before import to prevent conflicts
+            # The proxy env vars are disabled, so httpx won't use them
             _supabase_client = create_client(
                 settings.SUPABASE_URL,
                 service_key
             )
             print(f"✅ Supabase client initialized: {settings.SUPABASE_URL}")
             print(f"   Bucket: {settings.SUPABASE_BUCKET}")
+            print(f"   Proxy settings: Disabled (NO_PROXY=*)")
                     
         except TypeError as e:
             if "proxy" in str(e).lower():
-                # Check if proxy vars still exist
-                remaining_proxies = [var for var in proxy_vars if var in os.environ]
+                # This is likely a version incompatibility issue with gotrue/httpx
+                # Check installed versions
+                import sys
+                import subprocess
+                try:
+                    result = subprocess.run(
+                        [sys.executable, '-m', 'pip', 'show', 'supabase', 'gotrue', 'httpx'],
+                        capture_output=True,
+                        text=True
+                    )
+                    versions_info = result.stdout
+                except:
+                    versions_info = "Unable to check versions"
+                
                 error_msg = (
-                    f"Supabase client initialization failed due to proxy configuration: {e}. "
-                    f"Proxy environment variables still present: {remaining_proxies}. "
-                    "They should be removed before Supabase import. "
-                    "Check that HTTP_PROXY and HTTPS_PROXY are not set."
+                    f"Supabase client initialization failed: {e}\n"
+                    f"This is likely a version incompatibility between supabase-py, gotrue, and httpx.\n"
+                    f"Current versions:\n{versions_info}\n"
+                    f"Solution: This may require downgrading gotrue or updating supabase-py.\n"
+                    f"Proxy environment variables are already disabled (NO_PROXY=*)."
                 )
             else:
                 error_msg = f"Failed to initialize Supabase client: {str(e)}"

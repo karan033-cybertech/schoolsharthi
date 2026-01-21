@@ -10,9 +10,10 @@ passlib[bcrypt]==1.7.4
 python-multipart==0.0.6
 boto3==1.29.7
 supabase==2.3.4
+gotrue==2.8.1  # Pin gotrue to prevent proxy parameter conflicts with httpx
+httpx>=0.24,<0.26
 openai==0.28.1
 groq==0.5.0
-httpx>=0.24,<0.26
 python-dotenv==1.0.0
 alembic==1.12.1
 redis==5.0.1
