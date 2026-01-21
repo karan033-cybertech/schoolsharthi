@@ -15,7 +15,7 @@ _supabase_client: Optional[Client] = None
 def get_supabase_client() -> Client:
     """
     Get or create Supabase client instance.
-    Production-safe: Temporarily removes proxy env vars to prevent conflicts.
+    Production-safe: Proxy environment variables are removed at application startup.
     
     Returns:
         Supabase Client instance
@@ -38,36 +38,29 @@ def get_supabase_client() -> Client:
     # Create client if it doesn't exist
     if _supabase_client is None:
         try:
-            # Temporarily remove proxy environment variables to prevent httpx conflicts
-            # This prevents "unexpected keyword argument 'proxy'" errors on Render
+            # Ensure proxy vars are not set (they should be removed at startup)
+            # Double-check to prevent "unexpected keyword argument 'proxy'" errors on Render
             proxy_vars = ['HTTP_PROXY', 'HTTPS_PROXY', 'http_proxy', 'https_proxy', 
                          'ALL_PROXY', 'all_proxy', 'NO_PROXY', 'no_proxy']
-            saved_proxies = {}
-            
             for var in proxy_vars:
                 if var in os.environ:
-                    saved_proxies[var] = os.environ.pop(var)
+                    del os.environ[var]
             
-            try:
-                # Initialize Supabase client with standard parameters only
-                # Do NOT pass proxy or any custom httpx options to avoid conflicts
-                _supabase_client = create_client(
-                    settings.SUPABASE_URL,
-                    service_key
-                )
-                print(f"✅ Supabase client initialized: {settings.SUPABASE_URL}")
-                print(f"   Bucket: {settings.SUPABASE_BUCKET}")
-            finally:
-                # Restore proxy vars if they were set (for other parts of the app)
-                for var, value in saved_proxies.items():
-                    os.environ[var] = value
+            # Initialize Supabase client with standard parameters only
+            # Do NOT pass proxy or any custom httpx options to avoid conflicts
+            _supabase_client = create_client(
+                settings.SUPABASE_URL,
+                service_key
+            )
+            print(f"✅ Supabase client initialized: {settings.SUPABASE_URL}")
+            print(f"   Bucket: {settings.SUPABASE_BUCKET}")
                     
         except TypeError as e:
             if "proxy" in str(e).lower():
                 error_msg = (
                     f"Supabase client initialization failed due to proxy configuration: {e}. "
-                    "This is often caused by proxy environment variables. "
-                    "Ensure no proxy variables are set for Supabase operations."
+                    "Proxy environment variables detected. They should be removed at startup. "
+                    "Check that HTTP_PROXY and HTTPS_PROXY are not set."
                 )
             else:
                 error_msg = f"Failed to initialize Supabase client: {str(e)}"

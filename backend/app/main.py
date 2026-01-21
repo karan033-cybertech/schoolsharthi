@@ -18,6 +18,21 @@ from app.middleware import SecurityHeadersMiddleware, RequestLoggingMiddleware
 
 print("🚀 Starting SchoolSharthi Backend...")
 
+# Remove proxy environment variables at startup
+# Render injects HTTP_PROXY and HTTPS_PROXY which Supabase Python SDK does not support
+# This prevents "unexpected keyword argument 'proxy'" errors
+import os
+proxy_vars = ['HTTP_PROXY', 'HTTPS_PROXY', 'http_proxy', 'https_proxy', 
+              'ALL_PROXY', 'all_proxy', 'NO_PROXY', 'no_proxy']
+removed_proxies = []
+for var in proxy_vars:
+    if var in os.environ:
+        removed_proxies.append(var)
+        del os.environ[var]
+        print(f"⚠️  Removed proxy environment variable: {var}")
+if removed_proxies:
+    print(f"✅ Cleaned {len(removed_proxies)} proxy environment variable(s) for Render compatibility")
+
 # Sync DB
 sync_database_schema()
 
