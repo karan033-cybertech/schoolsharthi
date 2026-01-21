@@ -24,6 +24,10 @@ def rewrite_file_url(url: str) -> str:
     if url.startswith(settings.API_BASE_URL):
         return url
     
+    # If it's a Supabase Storage URL, return as-is (don't rewrite Supabase URLs)
+    if url.startswith("https://") and "supabase.co/storage" in url:
+        return url
+    
     # If it's an S3 URL, return as-is (don't rewrite S3 URLs)
     if url.startswith("https://") and ".s3." in url:
         return url

@@ -5,7 +5,7 @@ from app.database import get_db
 from app.models import Note, PYQ, User
 from app.schemas import NoteCreate, NoteResponse, PYQCreate, PYQResponse
 from app.auth import get_current_admin_user
-from app.services.s3_service import upload_file_to_s3
+from app.services.supabase_storage_service import upload_file_to_supabase
 from app.models import ClassLevel, Subject, ExamType
 
 router = APIRouter()
@@ -30,16 +30,16 @@ async def upload_note(
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid class_level or subject")
     
-    # Upload file to S3
+    # Upload file to Supabase Storage
     try:
-        file_url = await upload_file_to_s3(file, f"notes/{class_level}/{subject}/{chapter}/")
+        file_url = await upload_file_to_supabase(file, f"notes/{class_level}/{subject}/{chapter}/")
     except ValueError as e:
         raise HTTPException(status_code=503, detail=str(e))
     
     thumbnail_url = None
     if thumbnail:
         try:
-            thumbnail_url = await upload_file_to_s3(thumbnail, f"thumbnails/{class_level}/{subject}/{chapter}/")
+            thumbnail_url = await upload_file_to_supabase(thumbnail, f"thumbnails/{class_level}/{subject}/{chapter}/")
         except ValueError as e:
             raise HTTPException(status_code=503, detail=f"Thumbnail upload failed: {str(e)}")
     
@@ -90,15 +90,15 @@ async def upload_pyq(
     
     try:
         if question_paper:
-            question_paper_url = await upload_file_to_s3(
+            question_paper_url = await upload_file_to_supabase(
                 question_paper, f"pyqs/{exam_type}/{year}/"
             )
         if answer_key:
-            answer_key_url = await upload_file_to_s3(
+            answer_key_url = await upload_file_to_supabase(
                 answer_key, f"pyqs/{exam_type}/{year}/"
             )
         if solution:
-            solution_url = await upload_file_to_s3(
+            solution_url = await upload_file_to_supabase(
                 solution, f"pyqs/{exam_type}/{year}/"
             )
     except ValueError as e:

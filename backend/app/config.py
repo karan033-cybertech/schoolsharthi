@@ -15,14 +15,19 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
 
-    # AWS S3
+    # Supabase Storage
+    SUPABASE_URL: Optional[str] = None
+    SUPABASE_KEY: Optional[str] = None  # Service role key for storage operations
+    SUPABASE_BUCKET: str = "notes"  # Default bucket name
+
+    # AWS S3 (deprecated - use Supabase Storage instead)
     AWS_ACCESS_KEY_ID: Optional[str] = None
     AWS_SECRET_ACCESS_KEY: Optional[str] = None
     AWS_REGION: str = "ap-south-1"
     S3_BUCKET_NAME: Optional[str] = None
 
-    # Local storage
-    USE_LOCAL_STORAGE: bool = True
+    # Local storage (deprecated - use Supabase Storage instead)
+    USE_LOCAL_STORAGE: bool = False  # Disabled by default - use Supabase Storage
     LOCAL_STORAGE_PATH: str = "uploads"
     # Base URL for file serving - MUST be set in production
     # Example: https://api.yourdomain.com or https://your-backend.onrender.com
@@ -71,3 +76,12 @@ print(f"🌐 BASE_URL: {settings.BASE_URL}")
 print(f"🌐 API_BASE_URL (for file URLs): {settings.API_BASE_URL}")
 if settings.ENVIRONMENT == "production" and not settings.BASE_URL.startswith("https://"):
     print("⚠️  WARNING: BASE_URL should use HTTPS in production!")
+
+# Supabase Storage configuration check
+if not settings.SUPABASE_URL or not settings.SUPABASE_KEY:
+    print("⚠️  WARNING: Supabase Storage is not configured!")
+    print("   Please set SUPABASE_URL and SUPABASE_KEY environment variables.")
+    print("   File uploads will fail without Supabase Storage configuration.")
+else:
+    print(f"✅ Supabase Storage configured: {settings.SUPABASE_URL}")
+    print(f"   Bucket: {settings.SUPABASE_BUCKET}")

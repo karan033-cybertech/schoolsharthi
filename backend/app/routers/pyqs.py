@@ -84,7 +84,7 @@ def download_pyq(pyq_id: int, db: Session = Depends(get_db)):
         if url and "placeholder.com" in url:
             raise HTTPException(
                 status_code=503,
-                detail=f"File is not available. The {key.replace('_', ' ')} was uploaded before S3 storage was configured. "
+                detail=f"File is not available. The {key.replace('_', ' ')} was uploaded before storage was configured. "
                        "Please contact an administrator to re-upload this PYQ."
             )
     

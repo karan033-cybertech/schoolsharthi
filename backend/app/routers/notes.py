@@ -81,7 +81,7 @@ def download_note(note_id: int, db: Session = Depends(get_db)):
     if not note.file_url or "placeholder.com" in note.file_url:
         raise HTTPException(
             status_code=503,
-            detail="File is not available. The note was uploaded before S3 storage was configured. "
+            detail="File is not available. The note was uploaded before storage was configured. "
                    "Please contact an administrator to re-upload this note."
         )
     
