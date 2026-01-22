@@ -4,9 +4,6 @@ import { useState, useEffect } from 'react'
 
 // Subject mapping based on class
 const SUBJECTS_BY_CLASS: { [key: string]: string[] } = {
-  '6': ['English', 'Hindi', 'Maths', 'Science', 'Social Science'],
-  '7': ['English', 'Hindi', 'Maths', 'Science', 'Social Science'],
-  '8': ['English', 'Hindi', 'Maths', 'Science', 'Social Science'],
   '9': ['English', 'Hindi', 'Maths', 'Science', 'Social Science'],
   '10': ['English', 'Hindi', 'Maths', 'Science', 'Social Science'],
   '11': ['Physics', 'Chemistry', 'Biology', 'Maths', 'English', 'Hindi'],
@@ -35,7 +32,6 @@ export default function ClassSubjectFilter({
   useEffect(() => {
     if (selectedClass && SUBJECTS_BY_CLASS[selectedClass]) {
       setAvailableSubjects(SUBJECTS_BY_CLASS[selectedClass])
-      // Reset subject when class changes
       if (selectedSubject && !SUBJECTS_BY_CLASS[selectedClass].includes(selectedSubject)) {
         onSubjectChange('')
       }
@@ -45,7 +41,8 @@ export default function ClassSubjectFilter({
     }
   }, [selectedClass, selectedSubject, onSubjectChange])
 
-  const CLASS_LEVELS = ['6', '7', '8', '9', '10', '11', '12']
+  // 🔧 Only classes 9 to 12
+  const CLASS_LEVELS = ['9', '10', '11', '12']
 
   return (
     <div className={`grid md:grid-cols-2 gap-4 ${className}`}>
@@ -88,9 +85,11 @@ export default function ClassSubjectFilter({
               : 'border-gray-200 bg-white hover:border-gray-300'
           }`}
         >
-          <option value="">{selectedClass ? 'Select Subject' : 'Select Class First'}</option>
+          <option value="">
+            {selectedClass ? 'Select Subject' : 'Select Class First'}
+          </option>
           {availableSubjects.map((subject) => (
-            <option key={subject} value={subject.toLowerCase()}>
+            <option key={subject} value={subject}>
               {subject}
             </option>
           ))}
