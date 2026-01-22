@@ -8,13 +8,14 @@ import { useAuthStore } from '@/lib/store'
 export default function RegisterPage() {
   const router = useRouter()
   const { register, isLoading } = useAuthStore()
+
   const [formData, setFormData] = useState({
     email: '',
     username: '',
     password: '',
     full_name: '',
-    role: 'student',
   })
+
   const [error, setError] = useState('')
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -22,11 +23,10 @@ export default function RegisterPage() {
     setError('')
     try {
       await register(
-        formData.email, 
-        formData.username, 
-        formData.password, 
-        formData.full_name,
-        formData.role === 'student' ? undefined : formData.role
+        formData.email,
+        formData.username,
+        formData.password,
+        formData.full_name
       )
       router.push('/dashboard')
     } catch (err: any) {
@@ -47,7 +47,7 @@ export default function RegisterPage() {
             </h1>
             <p className="text-gray-600">Start your learning journey today - 100% Free!</p>
           </div>
-          
+
           {error && (
             <div className="bg-red-50 border-2 border-red-200 text-red-700 px-4 py-3 rounded-xl mb-6 flex items-center gap-2">
               <span>⚠️</span>
@@ -57,11 +57,10 @@ export default function RegisterPage() {
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label htmlFor="full_name" className="block text-sm font-semibold text-gray-700 mb-2">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Full Name
               </label>
               <input
-                id="full_name"
                 type="text"
                 value={formData.full_name}
                 onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
@@ -71,11 +70,10 @@ export default function RegisterPage() {
             </div>
 
             <div>
-              <label htmlFor="email" className="block text-sm font-semibold text-gray-700 mb-2">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Email
               </label>
               <input
-                id="email"
                 type="email"
                 required
                 value={formData.email}
@@ -86,11 +84,10 @@ export default function RegisterPage() {
             </div>
 
             <div>
-              <label htmlFor="username" className="block text-sm font-semibold text-gray-700 mb-2">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Username
               </label>
               <input
-                id="username"
                 type="text"
                 required
                 value={formData.username}
@@ -101,11 +98,10 @@ export default function RegisterPage() {
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-semibold text-gray-700 mb-2">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Password
               </label>
               <input
-                id="password"
                 type="password"
                 required
                 value={formData.password}
@@ -113,26 +109,6 @@ export default function RegisterPage() {
                 className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all"
                 placeholder="Create a strong password"
               />
-            </div>
-
-            <div>
-              <label htmlFor="role" className="block text-sm font-semibold text-gray-700 mb-2">
-                Account Type
-              </label>
-              <select
-                id="role"
-                value={formData.role}
-                onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all bg-white"
-              >
-                <option value="student">Student (Default)</option>
-                <option value="admin">Admin</option>
-              </select>
-              {formData.role === 'admin' && (
-                <p className="mt-2 text-sm text-orange-600 font-medium">
-                  ⚠️ Admin accounts have full access to manage the platform. Use responsibly!
-                </p>
-              )}
             </div>
 
             <button
@@ -143,15 +119,6 @@ export default function RegisterPage() {
               {isLoading ? '⏳ Creating account...' : '🚀 Create Free Account'}
             </button>
           </form>
-
-          <div className="mt-6 p-4 bg-blue-50 border-2 border-blue-200 rounded-xl">
-            <p className="text-sm text-blue-800 font-semibold mb-2">📋 How to Access Admin Panel:</p>
-            <ul className="text-xs text-blue-700 space-y-1 list-disc list-inside">
-              <li>Register with &ldquo;Admin&rdquo; account type above, OR</li>
-              <li>Login as admin user and click &ldquo;Admin Panel&rdquo; button in dashboard</li>
-              <li>Admin panel URL: <code className="bg-blue-100 px-1 rounded">/admin</code></li>
-            </ul>
-          </div>
 
           <p className="mt-6 text-center text-sm text-gray-600">
             Already have an account?{' '}
