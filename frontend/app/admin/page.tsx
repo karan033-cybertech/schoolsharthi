@@ -198,7 +198,7 @@ function UploadNoteForm() {
               className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all"
             >
               <option value="">Select Subject</option>
-              {['physics', 'chemistry', 'biology', 'mathematics'].map((subject) => (
+              {['physics', 'chemistry', 'biology', 'mathematics','english','hindi','science','Social science'].map((subject) => (
                 <option key={subject} value={subject}>
                   {subject.charAt(0).toUpperCase() + subject.slice(1)}
                 </option>
@@ -402,7 +402,7 @@ function UploadPYQForm() {
               className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all"
             >
               <option value="">Select Subject</option>
-              {['physics', 'chemistry', 'biology', 'mathematics'].map((subject) => (
+              {['physics', 'chemistry', 'biology', 'mathematics','english','hindi','science','Social science'].map((subject) => (
                 <option key={subject} value={subject}>
                   {subject.charAt(0).toUpperCase() + subject.slice(1)}
                 </option>
