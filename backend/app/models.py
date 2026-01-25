@@ -21,10 +21,16 @@ class ClassLevel(str, enum.Enum):
 
 
 class Subject(str, enum.Enum):
+    # Classes 11-12 subjects
     PHYSICS = "physics"
     CHEMISTRY = "chemistry"
     BIOLOGY = "biology"
     MATHEMATICS = "mathematics"
+    # Classes 6-10 subjects
+    HINDI = "hindi"
+    ENGLISH = "english"
+    SCIENCE = "science"
+    SOCIAL_SCIENCE = "socialscience"
 
 
 class ExamType(str, enum.Enum):

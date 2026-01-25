@@ -11,6 +11,19 @@ import Image from 'next/image'
 
 type TabType = 'upload-note' | 'upload-pyq' | 'manage-notes' | 'manage-pyqs' | 'manage-users' | 'ai-settings'
 
+// Helper function to get subjects based on class level
+function getSubjectsForClass(classLevel: string): string[] {
+  const classNum = parseInt(classLevel)
+  if (classNum >= 6 && classNum <= 10) {
+    // Classes 6-10: hindi, english, maths, science, socialscience
+    return ['hindi', 'english', 'mathematics', 'science', 'socialscience']
+  } else if (classNum === 11 || classNum === 12) {
+    // Classes 11-12: physics, chemistry, maths, biology
+    return ['physics', 'chemistry', 'mathematics', 'biology']
+  }
+  return []
+}
+
 export default function AdminPage() {
   const router = useRouter()
   const { user } = useAuthStore()
@@ -177,7 +190,11 @@ function UploadNoteForm() {
             <select
               required
               value={formData.class_level}
-              onChange={(e) => setFormData({ ...formData, class_level: e.target.value })}
+              onChange={(e) => {
+                const newClass = e.target.value
+                // Reset subject when class changes
+                setFormData({ ...formData, class_level: newClass, subject: '' })
+              }}
               className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all"
             >
               <option value="">Select Class</option>
@@ -195,12 +212,13 @@ function UploadNoteForm() {
               required
               value={formData.subject}
               onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
-              className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all"
+              disabled={!formData.class_level}
+              className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all disabled:bg-gray-100 disabled:cursor-not-allowed"
             >
-              <option value="">Select Subject</option>
-              {['physics', 'chemistry', 'biology', 'mathematics','english','hindi','science','Social science'].map((subject) => (
+              <option value="">{formData.class_level ? 'Select Subject' : 'Select Class first'}</option>
+              {getSubjectsForClass(formData.class_level).map((subject) => (
                 <option key={subject} value={subject}>
-                  {subject.charAt(0).toUpperCase() + subject.slice(1)}
+                  {subject === 'socialscience' ? 'Social Science' : subject.charAt(0).toUpperCase() + subject.slice(1)}
                 </option>
               ))}
             </select>
@@ -382,7 +400,11 @@ function UploadPYQForm() {
             <label className="block text-sm font-semibold text-gray-700 mb-2">Class</label>
             <select
               value={formData.class_level}
-              onChange={(e) => setFormData({ ...formData, class_level: e.target.value })}
+              onChange={(e) => {
+                const newClass = e.target.value
+                // Reset subject when class changes
+                setFormData({ ...formData, class_level: newClass, subject: '' })
+              }}
               className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all"
             >
               <option value="">Select Class</option>
@@ -399,12 +421,13 @@ function UploadPYQForm() {
             <select
               value={formData.subject}
               onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
-              className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all"
+              disabled={!formData.class_level}
+              className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all disabled:bg-gray-100 disabled:cursor-not-allowed"
             >
-              <option value="">Select Subject</option>
-              {['physics', 'chemistry', 'biology', 'mathematics','english','hindi','science','Social science'].map((subject) => (
+              <option value="">{formData.class_level ? 'Select Subject' : 'Select Class first'}</option>
+              {getSubjectsForClass(formData.class_level).map((subject) => (
                 <option key={subject} value={subject}>
-                  {subject.charAt(0).toUpperCase() + subject.slice(1)}
+                  {subject === 'socialscience' ? 'Social Science' : subject.charAt(0).toUpperCase() + subject.slice(1)}
                 </option>
               ))}
             </select>
