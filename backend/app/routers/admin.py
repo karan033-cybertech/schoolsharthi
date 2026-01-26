@@ -86,10 +86,11 @@ async def upload_note(
             raise HTTPException(status_code=503, detail=f"Thumbnail upload error: {str(e)}")
     
     # Create note record
+    # Use enum values (not enum objects) to ensure correct database storage
     note = Note(
         title=title,
-        class_level=class_level_enum,
-        subject=subject_enum,
+        class_level=class_level_enum.value,  # Use .value to get the string value
+        subject=subject_enum.value,  # Use .value to get the string value (e.g., "science" not "SCIENCE")
         chapter=chapter,
         description=description,
         file_url=file_url,
@@ -171,10 +172,10 @@ async def upload_pyq(
     
     pyq = PYQ(
         title=title,
-        exam_type=exam_type_enum,
+        exam_type=exam_type_enum.value,  # Use .value to get the string value
         year=year,
-        class_level=class_level_enum,
-        subject=subject_enum,
+        class_level=class_level_enum.value if class_level_enum else None,  # Use .value if not None
+        subject=subject_enum.value if subject_enum else None,  # Use .value if not None
         question_paper_url=question_paper_url,
         answer_key_url=answer_key_url,
         solution_url=solution_url,
