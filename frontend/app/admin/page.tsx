@@ -151,7 +151,10 @@ function UploadNoteForm() {
       setFile(null)
       setThumbnail(null)
     } catch (error: any) {
-      setMessage('❌ ' + (error.response?.data?.detail || 'Upload failed'))
+      // Show detailed error message from backend
+      const errorMessage = error.response?.data?.detail || error.message || 'Upload failed'
+      console.error('Upload error:', error.response?.data || error)
+      setMessage('❌ ' + errorMessage)
     } finally {
       setIsUploading(false)
     }

@@ -23,13 +23,23 @@ async def upload_note(
     current_user: User = Depends(get_current_admin_user),
     db: Session = Depends(get_db)
 ):
+    # Log received values for debugging
+    print(f"📝 Upload Note Request:")
+    print(f"   Title: {title}")
+    print(f"   Class Level: {class_level} (type: {type(class_level)})")
+    print(f"   Subject: {subject} (type: {type(subject)})")
+    print(f"   Chapter: {chapter}")
+    
     # Validate and convert enum types
     # Normalize subject to lowercase for enum matching
     subject_normalized = subject.lower().strip() if subject else ""
+    print(f"   Subject normalized: '{subject_normalized}'")
     
     try:
         class_level_enum = ClassLevel(class_level)
+        print(f"   ✅ Class level validated: {class_level_enum}")
     except ValueError as e:
+        print(f"   ❌ Class level validation failed: {e}")
         raise HTTPException(
             status_code=400, 
             detail=f"Invalid class_level: '{class_level}'. Valid values: {[c.value for c in ClassLevel]}"
@@ -37,7 +47,10 @@ async def upload_note(
     
     try:
         subject_enum = Subject(subject_normalized)
+        print(f"   ✅ Subject validated: {subject_enum}")
     except ValueError as e:
+        print(f"   ❌ Subject validation failed: {e}")
+        print(f"   Available subjects: {[s.value for s in Subject]}")
         raise HTTPException(
             status_code=400, 
             detail=f"Invalid subject: '{subject}'. Valid values: {[s.value for s in Subject]}. Received (normalized): '{subject_normalized}'"
@@ -45,16 +58,32 @@ async def upload_note(
     
     # Upload file to Supabase Storage
     try:
+        print(f"   📤 Uploading file to Supabase...")
         file_url = await upload_file_to_supabase(file, f"notes/{class_level}/{subject}/{chapter}/")
+        print(f"   ✅ File uploaded successfully: {file_url}")
     except ValueError as e:
-        raise HTTPException(status_code=503, detail=str(e))
+        print(f"   ❌ File upload failed: {e}")
+        raise HTTPException(status_code=503, detail=f"File upload failed: {str(e)}")
+    except Exception as e:
+        print(f"   ❌ Unexpected error during file upload: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=503, detail=f"File upload error: {str(e)}")
     
     thumbnail_url = None
     if thumbnail:
         try:
+            print(f"   📤 Uploading thumbnail to Supabase...")
             thumbnail_url = await upload_file_to_supabase(thumbnail, f"thumbnails/{class_level}/{subject}/{chapter}/")
+            print(f"   ✅ Thumbnail uploaded successfully: {thumbnail_url}")
         except ValueError as e:
+            print(f"   ❌ Thumbnail upload failed: {e}")
             raise HTTPException(status_code=503, detail=f"Thumbnail upload failed: {str(e)}")
+        except Exception as e:
+            print(f"   ❌ Unexpected error during thumbnail upload: {e}")
+            import traceback
+            traceback.print_exc()
+            raise HTTPException(status_code=503, detail=f"Thumbnail upload error: {str(e)}")
     
     # Create note record
     note = Note(
