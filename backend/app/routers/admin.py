@@ -24,11 +24,24 @@ async def upload_note(
     db: Session = Depends(get_db)
 ):
     # Validate and convert enum types
+    # Normalize subject to lowercase for enum matching
+    subject_normalized = subject.lower().strip() if subject else ""
+    
     try:
         class_level_enum = ClassLevel(class_level)
-        subject_enum = Subject(subject)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid class_level or subject")
+    except ValueError as e:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Invalid class_level: '{class_level}'. Valid values: {[c.value for c in ClassLevel]}"
+        )
+    
+    try:
+        subject_enum = Subject(subject_normalized)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Invalid subject: '{subject}'. Valid values: {[s.value for s in Subject]}. Received (normalized): '{subject_normalized}'"
+        )
     
     # Upload file to Supabase Storage
     try:
@@ -79,10 +92,33 @@ async def upload_pyq(
     # Validate and convert enum types
     try:
         exam_type_enum = ExamType(exam_type)
-        class_level_enum = ClassLevel(class_level) if class_level else None
-        subject_enum = Subject(subject) if subject else None
-    except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid exam_type, class_level, or subject")
+    except ValueError as e:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Invalid exam_type: '{exam_type}'. Valid values: {[e.value for e in ExamType]}"
+        )
+    
+    class_level_enum = None
+    if class_level:
+        try:
+            class_level_enum = ClassLevel(class_level)
+        except ValueError as e:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Invalid class_level: '{class_level}'. Valid values: {[c.value for c in ClassLevel]}"
+            )
+    
+    subject_enum = None
+    if subject:
+        # Normalize subject to lowercase for enum matching
+        subject_normalized = subject.lower().strip()
+        try:
+            subject_enum = Subject(subject_normalized)
+        except ValueError as e:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Invalid subject: '{subject}'. Valid values: {[s.value for s in Subject]}. Received (normalized): '{subject_normalized}'"
+            )
     
     question_paper_url = None
     answer_key_url = None
