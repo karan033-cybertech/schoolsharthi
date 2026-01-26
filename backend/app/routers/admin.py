@@ -46,37 +46,28 @@ async def upload_note(
     current_user: User = Depends(get_current_admin_user),
     db: Session = Depends(get_db)
 ):
-    # Log received values for debugging
-    print(f"📝 Upload Note Request:")
-    print(f"   Title: {title}")
-    print(f"   Class Level: {class_level} (type: {type(class_level)})")
-    print(f"   Subject: {subject} (type: {type(subject)})")
-    print(f"   Chapter: {chapter}")
+    # Normalize and validate input - CRITICAL: Normalize exactly once before validation
+    subject_normalized = subject.strip().lower() if subject else ""
+    class_level_normalized = class_level.strip() if class_level else ""
     
-    # Validate and convert enum types
-    # Normalize subject to lowercase for enum matching
-    subject_normalized = subject.lower().strip() if subject else ""
-    print(f"   Subject normalized: '{subject_normalized}'")
-    
+    # Validate class_level against enum
     try:
-        class_level_enum = ClassLevel(class_level)
-        print(f"   ✅ Class level validated: {class_level_enum}")
-    except ValueError as e:
-        print(f"   ❌ Class level validation failed: {e}")
+        ClassLevel(class_level_normalized)
+        class_level_db_value = class_level_normalized
+    except ValueError:
         raise HTTPException(
             status_code=400, 
             detail=f"Invalid class_level: '{class_level}'. Valid values: {[c.value for c in ClassLevel]}"
         )
     
+    # Validate subject against enum - use normalized lowercase value
     try:
-        subject_enum = Subject(subject_normalized)
-        print(f"   ✅ Subject validated: {subject_enum}")
-    except ValueError as e:
-        print(f"   ❌ Subject validation failed: {e}")
-        print(f"   Available subjects: {[s.value for s in Subject]}")
+        Subject(subject_normalized)
+        subject_db_value = subject_normalized
+    except ValueError:
         raise HTTPException(
             status_code=400, 
-            detail=f"Invalid subject: '{subject}'. Valid values: {[s.value for s in Subject]}. Received (normalized): '{subject_normalized}'"
+            detail=f"Invalid subject: '{subject}'. Valid values: {[s.value for s in Subject]}"
         )
     
     # Upload file to Supabase Storage
@@ -108,53 +99,39 @@ async def upload_note(
             traceback.print_exc()
             raise HTTPException(status_code=503, detail=f"Thumbnail upload error: {str(e)}")
     
-    # Create note record
-    # CRITICAL: Use safe_enum_value() to ensure PostgreSQL receives string values, not enum names
-    # This prevents "invalid input value for enum subject: 'SCIENCE'" errors
+    # Create note record - CRITICAL: Pass normalized lowercase strings directly to SQLAlchemy
+    # subject_db_value is already normalized lowercase string (e.g., "science")
+    # class_level_db_value is already normalized string (e.g., "10")
+    # This ensures PostgreSQL ENUM exact match every time
     try:
         note = Note(
             title=title,
-            class_level=safe_enum_value(class_level_enum),  # Returns "10" not "CLASS_10"
-            subject=safe_enum_value(subject_enum),  # Returns "science" not "SCIENCE"
+            class_level=class_level_db_value,  # Direct string value: "10"
+            subject=subject_db_value,  # Direct normalized lowercase string: "science"
             chapter=chapter,
             description=description,
             file_url=file_url,
             thumbnail_url=thumbnail_url,
             uploaded_by=current_user.id,
-            is_approved=True  # Auto-approve for admin
+            is_approved=True
         )
-        
-        print(f"   💾 Saving note to database...")
-        print(f"      class_level: {note.class_level} (type: {type(note.class_level)})")
-        print(f"      subject: {note.subject} (type: {type(note.subject)})")
         
         db.add(note)
         db.commit()
         db.refresh(note)
         
-        print(f"   ✅ Note saved successfully with ID: {note.id}")
         return note
         
     except Exception as e:
         db.rollback()
         error_msg = str(e)
-        print(f"   ❌ Database error: {error_msg}")
-        import traceback
-        traceback.print_exc()
-        
-        # Check if it's an enum error
         if "enum" in error_msg.lower() or "invalid input value" in error_msg.lower():
             raise HTTPException(
                 status_code=400,
-                detail=f"Invalid enum value. Class: {class_level}, Subject: {subject}. "
-                       f"Valid subjects: {[s.value for s in Subject]}. "
-                       f"Error: {error_msg}"
+                detail=f"Invalid enum value. Class: {class_level_db_value}, Subject: {subject_db_value}. "
+                       f"Valid subjects: {[s.value for s in Subject]}. Error: {error_msg}"
             )
-        else:
-            raise HTTPException(
-                status_code=500,
-                detail=f"Database error while saving note: {error_msg}"
-            )
+        raise HTTPException(status_code=500, detail=f"Database error: {error_msg}")
 
 
 @router.post("/pyqs/upload", response_model=PYQResponse)
@@ -170,35 +147,43 @@ async def upload_pyq(
     current_user: User = Depends(get_current_admin_user),
     db: Session = Depends(get_db)
 ):
-    # Validate and convert enum types
+    # Normalize and validate input - CRITICAL: Normalize exactly once before validation
+    exam_type_normalized = exam_type.strip().lower() if exam_type else ""
+    
+    # Validate exam_type
     try:
-        exam_type_enum = ExamType(exam_type)
-    except ValueError as e:
+        ExamType(exam_type_normalized)
+        exam_type_db_value = exam_type_normalized
+    except ValueError:
         raise HTTPException(
             status_code=400, 
             detail=f"Invalid exam_type: '{exam_type}'. Valid values: {[e.value for e in ExamType]}"
         )
     
-    class_level_enum = None
+    # Validate class_level if provided
+    class_level_db_value = None
     if class_level:
+        class_level_normalized = class_level.strip()
         try:
-            class_level_enum = ClassLevel(class_level)
-        except ValueError as e:
+            ClassLevel(class_level_normalized)
+            class_level_db_value = class_level_normalized
+        except ValueError:
             raise HTTPException(
                 status_code=400, 
                 detail=f"Invalid class_level: '{class_level}'. Valid values: {[c.value for c in ClassLevel]}"
             )
     
-    subject_enum = None
+    # Validate subject if provided - normalize to lowercase exactly once
+    subject_db_value = None
     if subject:
-        # Normalize subject to lowercase for enum matching
-        subject_normalized = subject.lower().strip()
+        subject_normalized = subject.strip().lower()
         try:
-            subject_enum = Subject(subject_normalized)
-        except ValueError as e:
+            Subject(subject_normalized)
+            subject_db_value = subject_normalized
+        except ValueError:
             raise HTTPException(
                 status_code=400, 
-                detail=f"Invalid subject: '{subject}'. Valid values: {[s.value for s in Subject]}. Received (normalized): '{subject_normalized}'"
+                detail=f"Invalid subject: '{subject}'. Valid values: {[s.value for s in Subject]}"
             )
     
     question_paper_url = None
@@ -221,14 +206,18 @@ async def upload_pyq(
     except ValueError as e:
         raise HTTPException(status_code=503, detail=str(e))
     
-    # CRITICAL: Use safe_enum_value() to ensure PostgreSQL receives string values, not enum names
+    # Create PYQ record - CRITICAL: Pass normalized lowercase strings directly to SQLAlchemy
+    # subject_db_value is already normalized lowercase string (e.g., "science") or None
+    # class_level_db_value is already normalized string (e.g., "10") or None
+    # exam_type_db_value is already normalized lowercase string (e.g., "boards")
+    # This ensures PostgreSQL ENUM exact match every time
     try:
         pyq = PYQ(
             title=title,
-            exam_type=safe_enum_value(exam_type_enum),  # Returns "boards" not "BOARDS"
+            exam_type=exam_type_db_value,  # Direct normalized lowercase string: "boards"
             year=year,
-            class_level=safe_enum_value(class_level_enum) if class_level_enum else None,  # Returns "10" not "CLASS_10"
-            subject=safe_enum_value(subject_enum) if subject_enum else None,  # Returns "science" not "SCIENCE"
+            class_level=class_level_db_value,  # Direct string value: "10" or None
+            subject=subject_db_value,  # Direct normalized lowercase string: "science" or None
             question_paper_url=question_paper_url,
             answer_key_url=answer_key_url,
             solution_url=solution_url,
@@ -236,38 +225,22 @@ async def upload_pyq(
             is_approved=True
         )
         
-        print(f"   💾 Saving PYQ to database...")
-        print(f"      exam_type: {pyq.exam_type} (type: {type(pyq.exam_type)})")
-        print(f"      class_level: {pyq.class_level} (type: {type(pyq.class_level)})")
-        print(f"      subject: {pyq.subject} (type: {type(pyq.subject)})")
-        
         db.add(pyq)
         db.commit()
         db.refresh(pyq)
         
-        print(f"   ✅ PYQ saved successfully with ID: {pyq.id}")
         return pyq
         
     except Exception as e:
         db.rollback()
         error_msg = str(e)
-        print(f"   ❌ Database error: {error_msg}")
-        import traceback
-        traceback.print_exc()
-        
-        # Check if it's an enum error
         if "enum" in error_msg.lower() or "invalid input value" in error_msg.lower():
             raise HTTPException(
                 status_code=400,
-                detail=f"Invalid enum value. Exam: {exam_type}, Class: {class_level}, Subject: {subject}. "
-                       f"Valid subjects: {[s.value for s in Subject]}. "
-                       f"Error: {error_msg}"
+                detail=f"Invalid enum value. Exam: {exam_type_db_value}, Class: {class_level_db_value}, Subject: {subject_db_value}. "
+                       f"Valid subjects: {[s.value for s in Subject]}. Error: {error_msg}"
             )
-        else:
-            raise HTTPException(
-                status_code=500,
-                detail=f"Database error while saving PYQ: {error_msg}"
-            )
+        raise HTTPException(status_code=500, detail=f"Database error: {error_msg}")
 
 
 @router.get("/notes/pending", response_model=List[NoteResponse])
