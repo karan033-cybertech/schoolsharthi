@@ -11,6 +11,29 @@ from app.models import ClassLevel, Subject, ExamType
 router = APIRouter()
 
 
+def safe_enum_value(enum_obj) -> str:
+    """
+    Safely extract string value from enum object.
+    Ensures PostgreSQL receives lowercase string values, not enum names.
+    
+    Args:
+        enum_obj: Enum instance (e.g., Subject.SCIENCE)
+        
+    Returns:
+        str: The enum's string value (e.g., "science" not "SCIENCE")
+        
+    Raises:
+        TypeError: If input is not an enum instance
+    """
+    if enum_obj is None:
+        return None
+    if not hasattr(enum_obj, 'value'):
+        raise TypeError(f"Expected enum object, got {type(enum_obj)}")
+    # Explicitly convert to string and ensure lowercase for database compatibility
+    value = str(enum_obj.value)
+    return value.lower() if isinstance(value, str) else value
+
+
 @router.post("/notes/upload", response_model=NoteResponse)
 async def upload_note(
     title: str = Form(...),
@@ -86,11 +109,12 @@ async def upload_note(
             raise HTTPException(status_code=503, detail=f"Thumbnail upload error: {str(e)}")
     
     # Create note record
-    # Use enum values (not enum objects) to ensure correct database storage
+    # CRITICAL: Use safe_enum_value() to ensure PostgreSQL receives string values, not enum names
+    # This prevents "invalid input value for enum subject: 'SCIENCE'" errors
     note = Note(
         title=title,
-        class_level=class_level_enum.value,  # Use .value to get the string value
-        subject=subject_enum.value,  # Use .value to get the string value (e.g., "science" not "SCIENCE")
+        class_level=safe_enum_value(class_level_enum),  # Returns "10" not "CLASS_10"
+        subject=safe_enum_value(subject_enum),  # Returns "science" not "SCIENCE"
         chapter=chapter,
         description=description,
         file_url=file_url,
@@ -170,12 +194,13 @@ async def upload_pyq(
     except ValueError as e:
         raise HTTPException(status_code=503, detail=str(e))
     
+    # CRITICAL: Use safe_enum_value() to ensure PostgreSQL receives string values, not enum names
     pyq = PYQ(
         title=title,
-        exam_type=exam_type_enum.value,  # Use .value to get the string value
+        exam_type=safe_enum_value(exam_type_enum),  # Returns "boards" not "BOARDS"
         year=year,
-        class_level=class_level_enum.value if class_level_enum else None,  # Use .value if not None
-        subject=subject_enum.value if subject_enum else None,  # Use .value if not None
+        class_level=safe_enum_value(class_level_enum) if class_level_enum else None,  # Returns "10" not "CLASS_10"
+        subject=safe_enum_value(subject_enum) if subject_enum else None,  # Returns "science" not "SCIENCE"
         question_paper_url=question_paper_url,
         answer_key_url=answer_key_url,
         solution_url=solution_url,
