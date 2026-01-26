@@ -111,23 +111,50 @@ async def upload_note(
     # Create note record
     # CRITICAL: Use safe_enum_value() to ensure PostgreSQL receives string values, not enum names
     # This prevents "invalid input value for enum subject: 'SCIENCE'" errors
-    note = Note(
-        title=title,
-        class_level=safe_enum_value(class_level_enum),  # Returns "10" not "CLASS_10"
-        subject=safe_enum_value(subject_enum),  # Returns "science" not "SCIENCE"
-        chapter=chapter,
-        description=description,
-        file_url=file_url,
-        thumbnail_url=thumbnail_url,
-        uploaded_by=current_user.id,
-        is_approved=True  # Auto-approve for admin
-    )
-    
-    db.add(note)
-    db.commit()
-    db.refresh(note)
-    
-    return note
+    try:
+        note = Note(
+            title=title,
+            class_level=safe_enum_value(class_level_enum),  # Returns "10" not "CLASS_10"
+            subject=safe_enum_value(subject_enum),  # Returns "science" not "SCIENCE"
+            chapter=chapter,
+            description=description,
+            file_url=file_url,
+            thumbnail_url=thumbnail_url,
+            uploaded_by=current_user.id,
+            is_approved=True  # Auto-approve for admin
+        )
+        
+        print(f"   💾 Saving note to database...")
+        print(f"      class_level: {note.class_level} (type: {type(note.class_level)})")
+        print(f"      subject: {note.subject} (type: {type(note.subject)})")
+        
+        db.add(note)
+        db.commit()
+        db.refresh(note)
+        
+        print(f"   ✅ Note saved successfully with ID: {note.id}")
+        return note
+        
+    except Exception as e:
+        db.rollback()
+        error_msg = str(e)
+        print(f"   ❌ Database error: {error_msg}")
+        import traceback
+        traceback.print_exc()
+        
+        # Check if it's an enum error
+        if "enum" in error_msg.lower() or "invalid input value" in error_msg.lower():
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid enum value. Class: {class_level}, Subject: {subject}. "
+                       f"Valid subjects: {[s.value for s in Subject]}. "
+                       f"Error: {error_msg}"
+            )
+        else:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Database error while saving note: {error_msg}"
+            )
 
 
 @router.post("/pyqs/upload", response_model=PYQResponse)
@@ -195,24 +222,52 @@ async def upload_pyq(
         raise HTTPException(status_code=503, detail=str(e))
     
     # CRITICAL: Use safe_enum_value() to ensure PostgreSQL receives string values, not enum names
-    pyq = PYQ(
-        title=title,
-        exam_type=safe_enum_value(exam_type_enum),  # Returns "boards" not "BOARDS"
-        year=year,
-        class_level=safe_enum_value(class_level_enum) if class_level_enum else None,  # Returns "10" not "CLASS_10"
-        subject=safe_enum_value(subject_enum) if subject_enum else None,  # Returns "science" not "SCIENCE"
-        question_paper_url=question_paper_url,
-        answer_key_url=answer_key_url,
-        solution_url=solution_url,
-        uploaded_by=current_user.id,
-        is_approved=True
-    )
-    
-    db.add(pyq)
-    db.commit()
-    db.refresh(pyq)
-    
-    return pyq
+    try:
+        pyq = PYQ(
+            title=title,
+            exam_type=safe_enum_value(exam_type_enum),  # Returns "boards" not "BOARDS"
+            year=year,
+            class_level=safe_enum_value(class_level_enum) if class_level_enum else None,  # Returns "10" not "CLASS_10"
+            subject=safe_enum_value(subject_enum) if subject_enum else None,  # Returns "science" not "SCIENCE"
+            question_paper_url=question_paper_url,
+            answer_key_url=answer_key_url,
+            solution_url=solution_url,
+            uploaded_by=current_user.id,
+            is_approved=True
+        )
+        
+        print(f"   💾 Saving PYQ to database...")
+        print(f"      exam_type: {pyq.exam_type} (type: {type(pyq.exam_type)})")
+        print(f"      class_level: {pyq.class_level} (type: {type(pyq.class_level)})")
+        print(f"      subject: {pyq.subject} (type: {type(pyq.subject)})")
+        
+        db.add(pyq)
+        db.commit()
+        db.refresh(pyq)
+        
+        print(f"   ✅ PYQ saved successfully with ID: {pyq.id}")
+        return pyq
+        
+    except Exception as e:
+        db.rollback()
+        error_msg = str(e)
+        print(f"   ❌ Database error: {error_msg}")
+        import traceback
+        traceback.print_exc()
+        
+        # Check if it's an enum error
+        if "enum" in error_msg.lower() or "invalid input value" in error_msg.lower():
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid enum value. Exam: {exam_type}, Class: {class_level}, Subject: {subject}. "
+                       f"Valid subjects: {[s.value for s in Subject]}. "
+                       f"Error: {error_msg}"
+            )
+        else:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Database error while saving PYQ: {error_msg}"
+            )
 
 
 @router.get("/notes/pending", response_model=List[NoteResponse])

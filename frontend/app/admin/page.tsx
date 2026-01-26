@@ -152,8 +152,22 @@ function UploadNoteForm() {
       setThumbnail(null)
     } catch (error: any) {
       // Show detailed error message from backend
-      const errorMessage = error.response?.data?.detail || error.message || 'Upload failed'
-      console.error('Upload error:', error.response?.data || error)
+      let errorMessage = 'Upload failed'
+      
+      if (error.response) {
+        // Backend returned an error response
+        errorMessage = error.response.data?.detail || error.response.data?.message || error.response.statusText || 'Upload failed'
+        console.error('Upload error (backend):', error.response.data || error.response)
+      } else if (error.request) {
+        // Request was made but no response received (network error)
+        errorMessage = 'Network error: Could not connect to server. Please check your connection and try again.'
+        console.error('Upload error (network):', error.request)
+      } else {
+        // Something else happened
+        errorMessage = error.message || 'Upload failed'
+        console.error('Upload error (other):', error)
+      }
+      
       setMessage('❌ ' + errorMessage)
     } finally {
       setIsUploading(false)
@@ -337,7 +351,24 @@ function UploadPYQForm() {
       setAnswerKey(null)
       setSolution(null)
     } catch (error: any) {
-      setMessage('❌ ' + (error.response?.data?.detail || 'Upload failed'))
+      // Show detailed error message from backend
+      let errorMessage = 'Upload failed'
+      
+      if (error.response) {
+        // Backend returned an error response
+        errorMessage = error.response.data?.detail || error.response.data?.message || error.response.statusText || 'Upload failed'
+        console.error('PYQ upload error (backend):', error.response.data || error.response)
+      } else if (error.request) {
+        // Request was made but no response received (network error)
+        errorMessage = 'Network error: Could not connect to server. Please check your connection and try again.'
+        console.error('PYQ upload error (network):', error.request)
+      } else {
+        // Something else happened
+        errorMessage = error.message || 'Upload failed'
+        console.error('PYQ upload error (other):', error)
+      }
+      
+      setMessage('❌ ' + errorMessage)
     } finally {
       setIsUploading(false)
     }
